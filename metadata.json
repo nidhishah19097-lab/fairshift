@@ -1,0 +1,7 @@
+{
+  "name": "FairShift — Work Should Be Fair",
+  "description": "Mobile-first transparent workforce platform addressing wage opacity, unrecorded overtime, anonymous hazard reporting, and fatigue prevention for Construction & Campus Facilities. Aligned with UN SDG 8.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
