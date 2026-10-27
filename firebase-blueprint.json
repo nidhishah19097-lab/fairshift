@@ -1,0 +1,135 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role and organization attributes",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "name": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["worker", "employer"] },
+        "industry": { "type": "string", "enum": ["construction", "campus"] },
+        "worksite": { "type": "string", "maxLength": 256 },
+        "employeeId": { "type": "string", "maxLength": 64 },
+        "baseHourlyRate": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "name", "role", "industry"]
+    },
+    "EmployerAuth": {
+      "title": "EmployerAuth",
+      "description": "Trusted authorization record for employer and administrative privilege verification",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "enum": ["employer"] },
+        "authorizedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Shift": {
+      "title": "Shift",
+      "description": "Worker shift attendance and overtime record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "workerId": { "type": "string", "maxLength": 128 },
+        "workerName": { "type": "string", "maxLength": 128 },
+        "industry": { "type": "string", "enum": ["construction", "campus"] },
+        "worksite": { "type": "string", "maxLength": 256 },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "standardHours": { "type": "number" },
+        "totalHours": { "type": "number" },
+        "overtimeHours": { "type": "number" },
+        "hourlyRate": { "type": "number" },
+        "overtimeMultiplier": { "type": "number" },
+        "overtimePay": { "type": "number" },
+        "estimatedPay": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "completed"] },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "workerId", "workerName", "industry", "worksite", "startTime", "status"]
+    },
+    "SafetyReport": {
+      "title": "SafetyReport",
+      "description": "Anonymous workplace hazard and incident report",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "anonymousToken": { "type": "string", "maxLength": 64 },
+        "timestamp": { "type": "string" },
+        "industry": { "type": "string", "enum": ["construction", "campus"] },
+        "worksite": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "severity": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "description": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Resolved"] },
+        "adminNotes": { "type": "string", "maxLength": 1000 },
+        "resolvedAt": { "type": "string" }
+      },
+      "required": ["id", "anonymousToken", "timestamp", "industry", "worksite", "category", "severity", "description", "status"]
+    },
+    "FatigueAlert": {
+      "title": "FatigueAlert",
+      "description": "Working-hour and fatigue threshold safety alert",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "workerId": { "type": "string", "maxLength": 128 },
+        "workerName": { "type": "string", "maxLength": 128 },
+        "industry": { "type": "string", "enum": ["construction", "campus"] },
+        "level": { "type": "string", "enum": ["normal", "caution", "warning", "critical"] },
+        "currentHours": { "type": "number" },
+        "thresholdHours": { "type": "number" },
+        "message": { "type": "string", "maxLength": 500 },
+        "recommendation": { "type": "string", "maxLength": 500 },
+        "acknowledged": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "workerId", "workerName", "industry", "level", "currentHours"]
+    },
+    "WorkerSkill": {
+      "title": "WorkerSkill",
+      "description": "Worker training hours and technical credentials",
+      "type": "object",
+      "properties": {
+        "workerId": { "type": "string", "maxLength": 128 },
+        "workerName": { "type": "string", "maxLength": 128 },
+        "completedTrainingHours": { "type": "number" },
+        "certifications": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["workerId", "workerName", "completedTrainingHours"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile with role assignment"
+    },
+    "/employers/{userId}": {
+      "schema": "EmployerAuth",
+      "description": "Trusted employer authorization register"
+    },
+    "/shifts/{shiftId}": {
+      "schema": "Shift",
+      "description": "Clock in and out attendance records"
+    },
+    "/safetyReports/{reportId}": {
+      "schema": "SafetyReport",
+      "description": "SafeVoice hazard reports with shielded worker identity"
+    },
+    "/fatigueAlerts/{alertId}": {
+      "schema": "FatigueAlert",
+      "description": "Fatigue threshold records and rest alerts"
+    },
+    "/workerSkills/{userId}": {
+      "schema": "WorkerSkill",
+      "description": "Verified skill credentials and training hours"
+    }
+  }
+}

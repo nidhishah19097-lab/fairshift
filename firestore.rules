@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Default-Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isEmployer() {
+      return isSignedIn() && exists(/databases/$(database)/documents/employers/$(request.auth.uid));
+    }
+
+    // 0. Connection Test Document
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // 1. Users Collection (Profile and Role)
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isEmployer();
+      allow list: if isEmployer();
+
+      allow create: if isOwner(userId) && isValidId(userId)
+        && incoming().uid == request.auth.uid
+        && incoming().email is string
+        && incoming().name is string
+        && (incoming().role == 'worker' || (incoming().role == 'employer' && isEmployer()));
+
+      allow update: if isOwner(userId)
+        && incoming().uid == existing().uid
+        && incoming().role == existing().role; // Prevents self-promotion
+
+      allow delete: if false;
+    }
+
+    // 2. Employers Authorization Collection (Trusted Privilege Registry)
+    match /employers/{userId} {
+      allow get: if isOwner(userId) || isEmployer();
+      allow list: if isEmployer();
+
+      // Employer authorization gate: requires either existing employer approval
+      // or valid organization verification code on creation
+      allow create: if isOwner(userId) && isValidId(userId)
+        && incoming().uid == request.auth.uid
+        && incoming().role == 'employer'
+        && (isEmployer() || incoming().authCode == 'FAIRSHIFT-2026-SRM');
+
+      allow update: if isEmployer() && incoming().uid == existing().uid;
+      allow delete: if false;
+    }
+
+    // 3. Shifts Collection (Smart Attendance)
+    match /shifts/{shiftId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn() && isValidId(shiftId)
+        && incoming().workerId == request.auth.uid
+        && incoming().id is string
+        && incoming().status in ['active', 'completed'];
+
+      allow update: if isSignedIn()
+        && (
+          (existing().workerId == request.auth.uid && incoming().workerId == existing().workerId)
+          || isEmployer()
+        );
+
+      allow delete: if isEmployer();
+    }
+
+    // 4. SafeVoice Anonymous Safety Reports (Identity Shielded)
+    match /safetyReports/{reportId} {
+      allow get, list: if true;
+
+      // Any signed in user can anonymously file a report without identifying themselves
+      allow create: if isSignedIn() && isValidId(reportId)
+        && incoming().id is string
+        && incoming().anonymousToken is string
+        && incoming().severity in ['Low', 'Medium', 'High', 'Critical']
+        && incoming().status in ['Open', 'In Progress', 'Resolved'];
+
+      // Only authorized employers can update status or append remediation notes
+      allow update: if isEmployer()
+        && incoming().id == existing().id
+        && incoming().anonymousToken == existing().anonymousToken;
+
+      allow delete: if isEmployer();
+    }
+
+    // 5. Fatigue Alerts
+    match /fatigueAlerts/{alertId} {
+      allow get: if isSignedIn() && (existing().workerId == request.auth.uid || isEmployer());
+      allow list: if isSignedIn() && (resource.data.workerId == request.auth.uid || isEmployer());
+
+      allow create: if isSignedIn() && isValidId(alertId)
+        && incoming().workerId == request.auth.uid;
+
+      allow update: if isSignedIn()
+        && (existing().workerId == request.auth.uid || isEmployer());
+
+      allow delete: if isEmployer();
+    }
+
+    // 6. Worker Skills Passport
+    match /workerSkills/{userId} {
+      allow get: if isOwner(userId) || isEmployer();
+      allow list: if isEmployer();
+
+      allow create, update: if isOwner(userId) || isEmployer();
+      allow delete: if false;
+    }
+  }
+}
